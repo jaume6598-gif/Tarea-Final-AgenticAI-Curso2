@@ -92,6 +92,13 @@ class Inventario:
     def bajo_minimo(self) -> list[Lote]:
         return [lote for lote in self.todos() if lote.stock < lote.stock_minimo]
 
+    def descontar(self, codigo: str, cantidad: int) -> int:
+        """Descuenta unidades (sin bajar de cero) y devuelve el stock final."""
+        with self._candado:
+            lote = self._lotes[codigo.strip().upper()]
+            lote.stock = max(0, lote.stock - cantidad)
+            return lote.stock
+
     def eliminar(self, codigo: str) -> bool:
         with self._candado:
             return self._lotes.pop(codigo.strip().upper(), None) is not None

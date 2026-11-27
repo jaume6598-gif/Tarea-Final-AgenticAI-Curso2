@@ -1,0 +1,26 @@
+# Feature: rubrica-completa
+Objective: close mandatory-base gaps of Pauta_tarea_final_Curso_2 and add all extensions. Branch: feat/rubrica-completa. Delivery: ask-on-risk. Runner: pytest (.venv).
+
+## Specs
+- S1 Router+worker: "El mismo agente cumple los roles de router y worker." Two requests trigger different flows; ReAct with explicit stop condition.
+- S2 A2A: "el agente principal encarga una tarea a otro agente por A2A y usa el resultado."
+- S3 Security: "Demuestren que una solicitud sin acceso válido se rechaza y que el agente bloquea una acción no autorizada sin ejecutarla."
+- S4 Resilience: "Provoquen un fallo y demuestren qué hace el flujo sin inventar resultados ni repetir indefinidamente."
+- S5 Deploy: "Un registro simple permite comprobar qué flujo se ejecutó y cómo terminó."
+- S6 Extensions (all, per user): GraphRAG, n8n A2A, RAG documental, MCP, memoria persistente, evaluación/control, observabilidad.
+- S7 Docs: ficha mínima + evidencias, no secrets in repo.
+
+## Tasks
+- T1 S4,S5 config + model factory w/ fallback + bitacora — inline — done
+- T2 S1 LangGraph router+worker, ReAct tools, explicit stop — inline — done
+- T3 S3 deterministic guard + admin-scoped action block (Risk item 2) — inline — done
+- T4 S2,S4 A2A auth, fallback route, fault injection — inline — done
+- T5 S5 /registros, /salud, thin main — inline — done
+- T6 S6 extensions (one commit each) — pending
+- T7 S7 README + evidencias — pending
+
+## Log
+- L1 (2026-11-27) "analiza el proyecto actual en base a la rubrica indicada en Pauta_tarea_final_Curso_2.pdf e identifica que cosas aun le faltan para cumplir toda la rubrica. Generar un plan con las modificaciones necesarias y considera toda la materia que esta en los .md ..."
+- L2 "considera agregar todas las ampliaciones de la rubrica aunque superemos la nota maxima."
+- L3 "Sí, empezá" — implementation authorized, starting with Fase 0 + base.
+- L4 T1-T5 done: pytest 17 passed (offline, fake models). Live Gemini/Render smoke test pending (no local .env). Note: MAX_PASOS_REACT default 25 so the tool-call cap (4) triggers first; both stops remain explicit.

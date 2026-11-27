@@ -1,0 +1,110 @@
+"""Ejecucion del ciclo ReAct de Jaime con traza observable."""
+
+import logging
+
+from langgraph.errors import GraphRecursionError
+
+from agentes.errores import ErrorFlujo
+from agentes.jaime.agente import obtener_agente_jaime
+from config import obtener_config
+from registro.bitacora import evento
+
+logger = logging.getLogger("sistema_agentes")
+
+PREFIJO_LIMITE = "Tool call limit exceeded"
+
+
+def extraer_texto(contenido) -> str:
+    if isinstance(contenido, str):
+        return contenido
+    if isinstance(contenido, list):
+        return "\n".join(
+            bloque.get("text", "")
+            for bloque in contenido
+            if isinstance(bloque, dict) and bloque.get("type") == "text"
+        )
+    return ""
+
+
+def analizar_resultado(mensajes) -> tuple[str, list[dict], str]:
+    """Extrae (respuesta, traza, motivo_parada) de los mensajes ReAct."""
+
+    traza: list[dict] = []
+    limite_alcanzado = False
+
+    for mensaje in mensajes:
+        for llamada in getattr(mensaje, "tool_calls", None) or []:
+            traza.append({
+                "evento": "decision_herramienta",
+                "herramienta": llamada["name"],
+                "argumentos": llamada.get("args", {}),
+            })
+        if mensaje.type == "tool":
+            contenido = extraer_texto(mensaje.content)
+            if contenido.startswith(PREFIJO_LIMITE):
+                limite_alcanzado = True
+            traza.append({
+                "evento": "resultado_herramienta",
+                "herramienta": mensaje.name,
+                "resultado": contenido[:300],
+            })
+
+    ultimo = mensajes[-1]
+
+    if limite_alcanzado:
+        motivo = "limite_herramientas"
+        texto = (
+            "Alcance el limite de consultas a herramientas "
+            f"({obtener_config().max_llamadas_herramienta}) sin una respuesta "
+            "final. No entrego conclusiones sin evidencia; reformula la "
+            "consulta con un alcance mas acotado."
+        )
+    else:
+        if ultimo.type != "ai" or getattr(ultimo, "tool_calls", None):
+            raise ErrorFlujo(502, "El agente no finalizo correctamente")
+        texto = extraer_texto(ultimo.content)
+        if not texto.strip():
+            raise ErrorFlujo(502, "El agente devolvio una respuesta vacia")
+        motivo = "respuesta_final"
+
+    traza.append({"evento": "parada", "motivo": motivo})
+    return texto, traza, motivo
+
+
+async def ejecutar_react(instruccion: str, simular_fallo: bool = False,
+                         agente=None) -> tuple[str, list[dict]]:
+    """Ejecuta Jaime con tope de pasos y de herramientas."""
+
+    config = obtener_config()
+    agente = agente or obtener_agente_jaime(simular_fallo)
+
+    try:
+        resultado = await agente.ainvoke(
+            {"messages": [{"role": "user", "content": instruccion}]},
+            config={"recursion_limit": config.max_pasos_react},
+        )
+    except GraphRecursionError:
+        evento("parada", motivo="limite_pasos",
+               limite=config.max_pasos_react)
+        raise ErrorFlujo(
+            504,
+            "El agente alcanzo el limite de pasos sin una respuesta final.",
+            motivo="limite_pasos",
+        )
+    except ErrorFlujo:
+        raise
+    except Exception as error:
+        logger.exception("Fallo al ejecutar Jaime")
+        raise ErrorFlujo(
+            502,
+            "Jaime no pudo completar la tarea (modelo principal y de "
+            f"respaldo no disponibles: {type(error).__name__}).",
+            motivo="modelo_no_disponible",
+        )
+
+    texto, traza, motivo = analizar_resultado(resultado["messages"])
+    for paso in traza:
+        if paso["evento"] in {"decision_herramienta", "parada"}:
+            evento(paso["evento"], **{k: v for k, v in paso.items()
+                                      if k != "evento"})
+    return texto, traza

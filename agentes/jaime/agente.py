@@ -11,8 +11,6 @@ Condiciones de parada explicitas:
    (recursion_limit -> GraphRecursionError).
 """
 
-from functools import lru_cache
-
 from langchain.agents import create_agent
 from langchain.agents.middleware import ToolCallLimitMiddleware
 
@@ -41,7 +39,19 @@ def crear_agente_jaime(simular_fallo: bool = False, herramientas=None):
     )
 
 
-@lru_cache(maxsize=2)
-def obtener_agente_jaime(simular_fallo: bool = False):
-    """El agente se compila una sola vez por modo."""
-    return crear_agente_jaime(simular_fallo=simular_fallo)
+_agentes: dict = {}
+
+
+def obtener_agente_jaime(simular_fallo: bool = False, herramientas_extra=()):
+    """El agente se compila una sola vez por modo y conjunto de herramientas."""
+
+    clave = (simular_fallo, tuple(sorted(h.name for h in herramientas_extra)))
+    if clave not in _agentes:
+        _agentes[clave] = crear_agente_jaime(
+            simular_fallo=simular_fallo,
+            herramientas=[*HERRAMIENTAS, *herramientas_extra],
+        )
+    return _agentes[clave]
+
+
+obtener_agente_jaime.cache_clear = _agentes.clear

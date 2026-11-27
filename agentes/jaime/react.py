@@ -6,6 +6,7 @@ from langgraph.errors import GraphRecursionError
 
 from agentes.errores import ErrorFlujo
 from agentes.jaime.agente import obtener_agente_jaime
+from agentes.jaime.mcp_cliente import nombres_mcp, obtener_herramientas_mcp
 from config import obtener_config
 from registro.bitacora import evento
 
@@ -76,7 +77,9 @@ async def ejecutar_react(instruccion: str, simular_fallo: bool = False,
     """Ejecuta Jaime con tope de pasos y de herramientas."""
 
     config = obtener_config()
-    agente = agente or obtener_agente_jaime(simular_fallo)
+    if agente is None:
+        herramientas_mcp = await obtener_herramientas_mcp()
+        agente = obtener_agente_jaime(simular_fallo, herramientas_mcp)
 
     try:
         resultado = await agente.ainvoke(
@@ -103,7 +106,13 @@ async def ejecutar_react(instruccion: str, simular_fallo: bool = False,
         )
 
     texto, traza, motivo = analizar_resultado(resultado["messages"])
+    remotas = nombres_mcp()
     for paso in traza:
+        if paso.get("herramienta") in remotas:
+            paso["origen"] = "mcp"
+            if paso["evento"] == "resultado_herramienta":
+                evento("llamada_mcp", herramienta=paso["herramienta"],
+                       resultado=paso.get("resultado", "")[:200])
         if paso["evento"] in {"decision_herramienta", "parada"}:
             evento(paso["evento"], **{k: v for k, v in paso.items()
                                       if k != "evento"})

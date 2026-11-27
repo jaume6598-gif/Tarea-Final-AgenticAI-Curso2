@@ -81,7 +81,7 @@ def obtener_config() -> Config:
         neo4j_clave=os.getenv("NEO4J_PASSWORD", ""),
         n8n_a2a_url=os.getenv("N8N_A2A_URL", ""),
         n8n_token=os.getenv("N8N_TOKEN", ""),
-        mcp_url=os.getenv("MCP_URL", ""),
+        mcp_url=os.getenv("MCP_URL", "http://127.0.0.1:8002/mcp"),
         mcp_token=os.getenv("MCP_TOKEN", ""),
     )
 

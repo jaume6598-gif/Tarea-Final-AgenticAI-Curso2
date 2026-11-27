@@ -1,0 +1,17 @@
+{
+  "proveedores": {
+    "Lacteos Sur": {"contacto": "ventas@lacteossur.example", "dias_entrega": 2, "pedido_minimo_unidades": 60, "dias_despacho": ["lunes", "jueves"]},
+    "Panificadora Andes": {"contacto": "pedidos@andes.example", "dias_entrega": 1, "pedido_minimo_unidades": 20, "dias_despacho": ["lunes", "miercoles", "viernes"]},
+    "Avicola del Valle": {"contacto": "comercial@avicolavalle.example", "dias_entrega": 2, "pedido_minimo_unidades": 15, "dias_despacho": ["martes", "viernes"]},
+    "Frigorifico Austral": {"contacto": "ventas@austral.example", "dias_entrega": 3, "pedido_minimo_unidades": 12, "dias_despacho": ["miercoles"]},
+    "Distribuidora Maipo": {"contacto": "pedidos@maipo.example", "dias_entrega": 4, "pedido_minimo_unidades": 50, "dias_despacho": ["lunes"]},
+    "Jugos del Pacifico": {"contacto": "ventas@pacifico.example", "dias_entrega": 2, "pedido_minimo_unidades": 40, "dias_despacho": ["martes", "jueves"]},
+    "Huerta Los Alamos": {"contacto": "huerta@losalamos.example", "dias_entrega": 1, "pedido_minimo_unidades": 20, "dias_despacho": ["lunes", "miercoles", "viernes"]}
+  },
+  "temperaturas": {
+    "Camara fria 1": [{"fecha": "2026-11-30 08:00", "c": 3.1}, {"fecha": "2026-11-30 16:00", "c": 3.4}, {"fecha": "2026-12-01 08:00", "c": 3.0}],
+    "Camara fria 2": [{"fecha": "2026-11-30 08:00", "c": 4.2}, {"fecha": "2026-11-30 16:00", "c": 6.8}, {"fecha": "2026-11-30 19:00", "c": 7.1}, {"fecha": "2026-12-01 08:00", "c": 4.0}],
+    "Camara fria 3": [{"fecha": "2026-11-30 08:00", "c": 2.5}, {"fecha": "2026-11-30 16:00", "c": 2.7}, {"fecha": "2026-12-01 08:00", "c": 2.6}],
+    "Camara fria 4": [{"fecha": "2026-11-30 08:00", "c": 4.8}, {"fecha": "2026-11-30 16:00", "c": 4.9}, {"fecha": "2026-12-01 08:00", "c": 4.7}]
+  }
+}

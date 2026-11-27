@@ -24,3 +24,4 @@ Objective: close mandatory-base gaps of Pauta_tarea_final_Curso_2 and add all ex
 - L2 "considera agregar todas las ampliaciones de la rubrica aunque superemos la nota maxima."
 - L3 "Sí, empezá" — implementation authorized, starting with Fase 0 + base.
 - L4 T1-T5 done: pytest 17 passed (offline, fake models). Live Gemini/Render smoke test pending (no local .env). Note: MAX_PASOS_REACT default 25 so the tool-call cap (4) triggers first; both stops remain explicit.
+- L5 Deployed on user's Render (fork gherrerz, branch feat/rubrica-completa). Smoke test 7/7 on Render (6/7 full run + fallo_modelo rerun after MODELO_RESPALDO=gemini-2.5-flash; same-model fallback shared quota and hit 429). gemini-2.5-flash-lite is no longer available to new users.

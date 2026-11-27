@@ -20,6 +20,7 @@ from agentes.errores import ErrorA2A, ErrorFlujo
 from agentes.jaime import a2a_cliente
 from agentes.jaime.react import ejecutar_react
 from agentes.jaime.router import seleccionar_flujo
+from agentes.modelos import resumir_error
 from config import obtener_config
 from registro.bitacora import ejecucion_actual, evento
 from seguridad.guardia import revisar_entrada
@@ -71,7 +72,8 @@ async def nodo_router(estado: EstadoJaime) -> dict:
             simular_fallo=estado.get("simular") == "modelo",
         )
     except Exception as error:
-        evento("error_router", tipo=type(error).__name__)
+        evento("error_router", tipo=type(error).__name__,
+               detalle=resumir_error(error))
         raise ErrorFlujo(502, "No se pudo clasificar la solicitud",
                          motivo="router_no_disponible")
     evento("decision_router", flujo=decision.flujo, motivo=decision.motivo)

@@ -75,10 +75,16 @@ def crear_modelos(temperatura: float | None = None,
     return crear_modelo_gemini(config.modelo, temperatura), respaldo
 
 
+def resumir_error(error: Exception, largo: int = 160) -> str:
+    """Short provider error for the log (status and message, no secrets)."""
+    return " ".join(str(error).split())[:largo]
+
+
 def _registrar_respaldo(error: Exception) -> None:
     evento(
         "modelo_respaldo_usado",
         motivo=type(error).__name__,
+        detalle=resumir_error(error),
         modelo_respaldo=obtener_config().modelo_respaldo,
     )
 

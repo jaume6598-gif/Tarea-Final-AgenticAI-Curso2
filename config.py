@@ -64,7 +64,7 @@ class Config:
 def obtener_config() -> Config:
     return Config(
         modelo=os.getenv("MODELO", "gemini-2.5-flash"),
-        modelo_respaldo=os.getenv("MODELO_RESPALDO", "gemini-2.5-flash-lite"),
+        modelo_respaldo=os.getenv("MODELO_RESPALDO", "gemini-3.5-flash-lite"),
         timeout_llm_s=_decimal("TIMEOUT_LLM_S", 30.0),
         max_pasos_react=_entero("MAX_PASOS_REACT", 25),
         max_llamadas_herramienta=_entero("MAX_LLAMADAS_HERRAMIENTA", 4),

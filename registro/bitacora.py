@@ -32,6 +32,10 @@ class Ejecucion:
     estado: str = "en_curso"
     duracion_ms: int | None = None
     eventos: list[dict[str, Any]] = field(default_factory=list)
+    uso: dict[str, Any] = field(default_factory=lambda: {
+        "llamadas_llm": 0, "tokens_entrada": 0, "tokens_salida": 0,
+        "modelos": {},
+    })
     _t0: float = field(default_factory=time.perf_counter, repr=False)
 
     def como_dict(self) -> dict[str, Any]:
@@ -42,6 +46,7 @@ class Ejecucion:
             "flujo": self.flujo,
             "estado": self.estado,
             "duracion_ms": self.duracion_ms,
+            "uso": self.uso,
             "eventos": list(self.eventos),
         }
 
@@ -111,6 +116,8 @@ class Bitacora:
             "flujo": ejecucion.flujo,
             "estado": estado,
             "duracion_ms": ejecucion.duracion_ms,
+            "llamadas_llm": ejecucion.uso["llamadas_llm"],
+            "tokens": ejecucion.uso["tokens_entrada"] + ejecucion.uso["tokens_salida"],
             **datos,
         })
         if self._persistir is not None:

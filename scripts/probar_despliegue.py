@@ -71,11 +71,12 @@ def _tokens() -> dict:
     return {"lector": config.app_api_token, "admin": config.app_admin_token}
 
 
-def ejecutar(url: str) -> list[dict]:
+def ejecutar(url: str, solo: list[str] | None = None) -> list[dict]:
     tokens = _tokens()
     resultados = []
+    escenarios = [e for e in ESCENARIOS if not solo or e["nombre"] in solo]
     with httpx.Client(base_url=url.rstrip("/"), timeout=240) as cliente:
-        for escenario in ESCENARIOS:
+        for escenario in escenarios:
             cabeceras = dict(escenario.get("cabeceras", {}))
             if escenario["token"]:
                 cabeceras["X-API-Key"] = tokens[escenario["token"]]
@@ -120,8 +121,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("url")
     parser.add_argument("--salida", help="Write full evidence JSON here")
+    parser.add_argument("--solo", nargs="*", help="Run only these scenario names")
     argumentos = parser.parse_args()
-    resultados = ejecutar(argumentos.url)
+    resultados = ejecutar(argumentos.url, argumentos.solo)
     if argumentos.salida:
         with open(argumentos.salida, "w", encoding="utf-8") as archivo:
             json.dump(resultados, archivo, ensure_ascii=False, indent=2)

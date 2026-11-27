@@ -14,6 +14,8 @@ from agentes.jaime.grafo import SIMULACIONES, grafo_jaime
 from config import obtener_config, validar_config_api
 from datos.inventario import inventario
 from registro.bitacora import bitacora, evento
+from registro.metricas import ContadorTokens, resumen
+from seguridad.aprobaciones import ErrorAprobacion, aprobaciones
 from seguridad.politicas import ALCANCE_ADMIN, ALCANCE_LECTOR, fijar_alcance
 
 logging.basicConfig(level=logging.INFO)
@@ -107,10 +109,10 @@ async def consultar_agentes(
     evento("solicitud", alcance=alcance, simulacion=simular or None)
 
     try:
-        resultado = await grafo_jaime.ainvoke({
-            "pregunta": pregunta,
-            "simular": simular,
-        })
+        resultado = await grafo_jaime.ainvoke(
+            {"pregunta": pregunta, "simular": simular},
+            config={"callbacks": [ContadorTokens()]},
+        )
     except ErrorFlujo as error:
         bitacora.finalizar(ejecucion, "error", motivo=error.motivo,
                            codigo=error.codigo)
@@ -137,6 +139,8 @@ async def consultar_agentes(
     cuerpo = {
         "id_ejecucion": ejecucion.id_ejecucion,
         "estado": estado,
+        "duracion_ms": ejecucion.duracion_ms,
+        "uso": ejecucion.uso,
         "flujo": resultado.get("flujo"),
         "motivo": resultado.get("motivo"),
         "ruta": resultado.get("ruta", []),
@@ -166,12 +170,54 @@ def listar_registros(
     ]
 
 
+@app.get("/metricas")
+def obtener_metricas(_alcance: str = Depends(verificar_acceso)):
+    """Aggregated metrics over the executions kept in memory."""
+    return resumen(bitacora)
+
+
 @app.get("/registros/{id_ejecucion}")
 def obtener_registro(id_ejecucion: str, _alcance: str = Depends(verificar_acceso)):
     ejecucion = bitacora.obtener(id_ejecucion)
     if ejecucion is None:
         raise HTTPException(status_code=404, detail="Ejecucion no encontrada")
     return ejecucion.como_dict()
+
+
+class Decision(BaseModel):
+    aprobar: bool
+    comentario: str | None = Field(default=None, max_length=500)
+
+
+@app.get("/aprobaciones")
+def listar_aprobaciones(
+    estado: str | None = Query(None, pattern="^(pendiente|aprobada|rechazada)$"),
+    _alcance: str = Depends(verificar_acceso),
+):
+    return [s.como_dict() for s in aprobaciones.listar(estado)]
+
+
+@app.post("/aprobaciones/{id_solicitud}")
+def decidir_aprobacion(
+    id_solicitud: str,
+    decision: Decision,
+    alcance: str = Depends(verificar_acceso),
+):
+    """Human-in-the-loop: only an administrator approves or rejects."""
+
+    if alcance != ALCANCE_ADMIN:
+        raise HTTPException(
+            status_code=403,
+            detail="Solo un administrador puede aprobar o rechazar mermas",
+        )
+    try:
+        solicitud = aprobaciones.decidir(
+            id_solicitud, decision.aprobar, responsable=ALCANCE_ADMIN,
+            comentario=decision.comentario,
+        )
+    except ErrorAprobacion as error:
+        raise HTTPException(status_code=409, detail=str(error))
+    return solicitud.como_dict()
 
 
 @app.get("/inventario/{lote}")

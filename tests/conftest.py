@@ -60,13 +60,20 @@ def cliente():
 
 
 @pytest.fixture(autouse=True)
-def inventario_limpio():
+def estado_limpio(monkeypatch):
     from datos.inventario import inventario
     from agentes.jaime.agente import obtener_agente_jaime
+    from seguridad.aprobaciones import aprobaciones
+
+    async def sin_mcp():
+        return []
+    monkeypatch.setattr("agentes.jaime.react.obtener_herramientas_mcp", sin_mcp)
     inventario.reiniciar()
+    aprobaciones.reiniciar()
     obtener_agente_jaime.cache_clear()
     yield
     inventario.reiniciar()
+    aprobaciones.reiniciar()
     obtener_agente_jaime.cache_clear()
 
 

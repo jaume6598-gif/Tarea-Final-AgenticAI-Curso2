@@ -120,6 +120,48 @@ def consultar_vencimientos(dias: int = 7) -> str:
 
 
 @tool
+def buscar_procedimientos(consulta: str) -> str:
+    """Busca en los documentos internos del minimarket (procedimiento
+    FEFO, politica de mermas, plan HACCP de refrigerados) y devuelve los
+    fragmentos relevantes con su fuente [archivo §seccion].
+    Usala para preguntas sobre reglas, procedimientos o politicas.
+    """
+
+    from rag.documentos import formatear, obtener_buscador
+
+    fragmentos, metodo = obtener_buscador().buscar(consulta)
+    evento(
+        "rag_fragmentos",
+        consulta=consulta,
+        metodo=metodo,
+        fuentes=[f.cita for f in fragmentos],
+        puntajes=[f.puntaje for f in fragmentos],
+    )
+    return formatear(fragmentos)
+
+
+@tool
+def registrar_merma(lote: str, cantidad: int, motivo: str) -> str:
+    """Propone registrar una merma (vencimiento, daño, cadena de frio o
+    diferencia de inventario). NO descuenta stock: crea una solicitud
+    pendiente que un administrador debe aprobar.
+    """
+
+    from seguridad.aprobaciones import ErrorAprobacion, aprobaciones
+
+    try:
+        solicitud = aprobaciones.crear(lote, int(cantidad), motivo)
+    except (ErrorAprobacion, ValueError) as error:
+        return f"No se registro la merma: {error}"
+    return (
+        f"PENDIENTE_APROBACION: solicitud {solicitud.id} creada para "
+        f"{solicitud.cantidad} unidades del lote {solicitud.lote} "
+        f"({solicitud.motivo}). El stock NO cambia hasta que un "
+        "administrador la apruebe."
+    )
+
+
+@tool
 def eliminar_lote(lote: str) -> str:
     """Elimina un lote del inventario (accion con efecto real).
     Solo se ejecuta con acceso de administrador.
@@ -138,5 +180,7 @@ HERRAMIENTAS = [
     consultar_mis_apuntes,
     consultar_stock,
     consultar_vencimientos,
+    buscar_procedimientos,
+    registrar_merma,
     eliminar_lote,
 ]

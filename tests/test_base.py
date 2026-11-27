@@ -129,7 +129,7 @@ def test_parada_por_limite_de_pasos(cliente, monkeypatch, router_fijo):
         async def ainvoke(self, *args, **kwargs):
             raise GraphRecursionError("limite")
     monkeypatch.setattr("agentes.jaime.react.obtener_agente_jaime",
-                        lambda simular_fallo=False: AgenteSinFin())
+                        lambda *args, **kwargs: AgenteSinFin())
 
     respuesta = cliente.post("/consultar", headers=LECTOR,
                              json={"pregunta": "Revisa todo el inventario"})

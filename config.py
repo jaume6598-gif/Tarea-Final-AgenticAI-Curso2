@@ -13,6 +13,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
+def _texto(nombre: str, defecto: str = "") -> str:
+    """Empty values in .env (e.g. `MCP_URL=`) fall back to the default."""
+    valor = os.getenv(nombre, "").strip()
+    return valor or defecto
+
+
 def _entero(nombre: str, defecto: int) -> int:
     valor = os.getenv(nombre, "").strip()
     return int(valor) if valor else defecto
@@ -63,26 +69,26 @@ class Config:
 @lru_cache(maxsize=1)
 def obtener_config() -> Config:
     return Config(
-        modelo=os.getenv("MODELO", "gemini-2.5-flash"),
-        modelo_respaldo=os.getenv("MODELO_RESPALDO", "gemini-3.5-flash-lite"),
+        modelo=_texto("MODELO", "gemini-2.5-flash"),
+        modelo_respaldo=_texto("MODELO_RESPALDO", "gemini-3.5-flash-lite"),
         timeout_llm_s=_decimal("TIMEOUT_LLM_S", 30.0),
         max_pasos_react=_entero("MAX_PASOS_REACT", 25),
         max_llamadas_herramienta=_entero("MAX_LLAMADAS_HERRAMIENTA", 4),
-        app_api_token=os.getenv("APP_API_TOKEN", ""),
-        app_admin_token=os.getenv("APP_ADMIN_TOKEN", ""),
-        a2a_token=os.getenv("A2A_TOKEN", ""),
+        app_api_token=_texto("APP_API_TOKEN", ""),
+        app_admin_token=_texto("APP_ADMIN_TOKEN", ""),
+        a2a_token=_texto("A2A_TOKEN", ""),
         permitir_simulacion_fallos=_booleano("PERMITIR_SIMULACION_FALLOS"),
-        url_gerardo=os.getenv("URL_GERARDO", "http://127.0.0.1:8001"),
+        url_gerardo=_texto("URL_GERARDO", "http://127.0.0.1:8001"),
         timeout_a2a_s=_decimal("TIMEOUT_A2A_S", 90.0),
-        fecha_referencia=os.getenv("FECHA_REFERENCIA", "2026-12-01"),
-        database_url=os.getenv("DATABASE_URL", ""),
-        neo4j_uri=os.getenv("NEO4J_URI", ""),
-        neo4j_usuario=os.getenv("NEO4J_USERNAME", ""),
-        neo4j_clave=os.getenv("NEO4J_PASSWORD", ""),
-        n8n_a2a_url=os.getenv("N8N_A2A_URL", ""),
-        n8n_token=os.getenv("N8N_TOKEN", ""),
-        mcp_url=os.getenv("MCP_URL", "http://127.0.0.1:8002/mcp"),
-        mcp_token=os.getenv("MCP_TOKEN", ""),
+        fecha_referencia=_texto("FECHA_REFERENCIA", "2026-12-01"),
+        database_url=_texto("DATABASE_URL", ""),
+        neo4j_uri=_texto("NEO4J_URI", ""),
+        neo4j_usuario=_texto("NEO4J_USERNAME", ""),
+        neo4j_clave=_texto("NEO4J_PASSWORD", ""),
+        n8n_a2a_url=_texto("N8N_A2A_URL", ""),
+        n8n_token=_texto("N8N_TOKEN", ""),
+        mcp_url=_texto("MCP_URL", "http://127.0.0.1:8002/mcp"),
+        mcp_token=_texto("MCP_TOKEN", ""),
     )
 
 

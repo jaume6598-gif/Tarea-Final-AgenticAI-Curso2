@@ -183,3 +183,17 @@ def test_tokens_y_metricas_por_ejecucion(cliente, modelos_falsos, router_fijo):
     assert metricas["tokens"]["entrada_total"] >= 240
     assert metricas["por_flujo"]["OPERACIONES"] >= 1
     assert cliente.get("/metricas").status_code == 401
+
+
+def test_variable_vacia_en_env_usa_el_valor_por_defecto(monkeypatch):
+    import config
+
+    monkeypatch.setenv("MCP_URL", "")
+    monkeypatch.setenv("URL_GERARDO", "  ")
+    config.obtener_config.cache_clear()
+    try:
+        valores = config.obtener_config()
+        assert valores.mcp_url == "http://127.0.0.1:8002/mcp"
+        assert valores.url_gerardo == "http://127.0.0.1:8001"
+    finally:
+        config.obtener_config.cache_clear()

@@ -28,6 +28,13 @@ def _token() -> str:
     return config.mcp_token or config.a2a_token
 
 
+def _causa(error: BaseException) -> str:
+    """Unwraps anyio ExceptionGroups to show the real cause."""
+    while isinstance(error, BaseExceptionGroup) and error.exceptions:
+        error = error.exceptions[0]
+    return f"{type(error).__name__}: {' '.join(str(error).split())[:160]}"
+
+
 async def obtener_herramientas_mcp() -> list:
     """Carga (una vez) las herramientas MCP permitidas."""
 
@@ -49,8 +56,10 @@ async def obtener_herramientas_mcp() -> list:
         todas = await cliente.get_tools()
     except Exception as error:
         _cache["fallo_en"] = time.monotonic()
-        logger.warning("MCP no disponible: %s", type(error).__name__)
-        evento("mcp_no_disponible", motivo=type(error).__name__,
+        causa = _causa(error)
+        logger.warning("MCP no disponible: %s", causa)
+        evento("mcp_no_disponible", motivo=type(error).__name__, detalle=causa,
+               url=config.mcp_url or "(vacia)",
                ruta_respaldo="solo_herramientas_locales")
         return []
 

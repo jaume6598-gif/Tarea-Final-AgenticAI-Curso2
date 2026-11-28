@@ -16,8 +16,8 @@ Objective: close mandatory-base gaps of Pauta_tarea_final_Curso_2 and add all ex
 - T3 S3 deterministic guard + admin-scoped action block (Risk item 2) — inline — done
 - T4 S2,S4 A2A auth, fallback route, fault injection — inline — done
 - T5 S5 /registros, /salud, thin main — inline — done
-- T6 S6 extensions (one commit each) — pending
-- T7 S7 README + evidencias — pending
+- T6 S6 extensions (one commit each) — done
+- T7 S7 README + evidencias — done
 
 ## Log
 - L1 (2026-11-27) "analiza el proyecto actual en base a la rubrica indicada en Pauta_tarea_final_Curso_2.pdf e identifica que cosas aun le faltan para cumplir toda la rubrica. Generar un plan con las modificaciones necesarias y considera toda la materia que esta en los .md ..."
@@ -32,3 +32,4 @@ Objective: close mandatory-base gaps of Pauta_tarea_final_Curso_2 and add all ex
 - L10 Neo4j Aura loaded (Ubicacion fix) and n8n A2A live (4 draft orders). Local: G01/G02 2/2 (GraphRAG + MCP in one ReAct), N01 1/1. Render eval v1.3.0 18/20: router regression (R03/R07 routed to REPOSICION) caught by the eval set; router rules tightened, 7/7 on a direct router probe. gemini-3.5-flash-lite ignores temperature=0 (fixed sampling), so routing is not fully deterministic.
 - L11 Render after router fix: R03, R07, N01 3/3. All 7 extensions verified live (Render: eval v1.3.0 18/20 then the 2 regressions fixed 3/3). Next: README + evidencias.
 - L12 README rewritten per ficha minima; evidencias/01-13,15,16 generated against Render (all OK), eval v1.3.0 19/20 on Render (T02 429 quota on both models, handled). Secret scan clean. Pending: 14-memoria-parte-2 after a Render restart.
+- L13 Evidence 14 regenerated after a verified Render restart (in-memory log 0 executions; part-1 log served from Postgres; thread recovered 6 messages). All evidence complete.

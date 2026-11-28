@@ -2,7 +2,7 @@
 
 **Criterio:** Ampliacion +0,5: memoria persistente (despues del reinicio)  
 **Servicio:** https://tarea-final-agenticai-curso2-5vk1.onrender.com  
-**Fecha (UTC):** 2026-11-28 01:54
+**Fecha (UTC):** 2026-11-28 01:58
 
 ## Entrada
 ```bash
@@ -17,8 +17,8 @@ curl -s -X POST "$URL/consultar" \
 |---|---|---|
 | 1 | `solicitud` | {"alcance": "lector", "simulacion": null, "hilo": "evidencia-memoria"} |
 | 2 | `guardia_entrada` | {"permitido": true, "categoria": "ok"} |
-| 3 | `decision_router` | {"flujo": "OPERACIONES", "motivo": "Es una pregunta de seguimiento sobre el inventario y lotes previos de la conversación."} |
-| 4 | `memoria_recuperada` | {"hilo": "evidencia-memoria", "mensajes_previos": 4, "almacenamiento": "postgres"} |
+| 3 | `decision_router` | {"flujo": "OPERACIONES", "motivo": "Es una pregunta de seguimiento sobre inventario y lotes dentro del hilo de conversación."} |
+| 4 | `memoria_recuperada` | {"hilo": "evidencia-memoria", "mensajes_previos": 6, "almacenamiento": "postgres"} |
 | 5 | `parada` | {"motivo": "respuesta_final"} |
 | 6 | `fin` | {"estado": "completado"} |
 
@@ -26,21 +26,21 @@ curl -s -X POST "$URL/consultar" \
 HTTP 200
 ```json
 {
-  "id_ejecucion": "6bd4672d-2720-4c05-a436-b5a4f9de0286",
+  "id_ejecucion": "ff2585cd-9ea3-45c4-8051-1513b51563e5",
   "estado": "completado",
   "flujo": "OPERACIONES",
-  "motivo": "Es una pregunta de seguimiento sobre el inventario y lotes previos de la conversación.",
+  "motivo": "Es una pregunta de seguimiento sobre inventario y lotes dentro del hilo de conversación.",
   "ruta": [
     "guardia_entrada",
     "router",
     "operaciones"
   ],
   "hilo": "evidencia-memoria",
-  "duracion_ms": 2044,
+  "duracion_ms": 3432,
   "uso": {
     "llamadas_llm": 2,
-    "tokens_entrada": 2431,
-    "tokens_salida": 125,
+    "tokens_entrada": 2570,
+    "tokens_salida": 131,
     "modelos": {
       "gemini-3.5-flash-lite": 2
     }
@@ -49,9 +49,9 @@ HTTP 200
 ```
 **Respuesta de Jaime:**
 
-> El lote que me pediste seguir de cerca es el **L-103** (Queso fresco 500g), y tiene un stock actual de **15 unidades** (estando por debajo del mínimo establecido de 20). 
+> El lote que me pediste seguir de cerca es el **L-103** (Queso fresco 500g), y tiene un stock actual de **15 unidades** (quedando 5 unidades por debajo del stock mínimo de 20). 
 > 
-> Mantengámoslo en la mira en la Cámara fría 2, controlando tanto las rotaciones como los parámetros de temperatura para cuidar la inocuidad.
+> Como siempre en planta, sigámosle la pista de cerca en la Cámara fría 2, controlando rotación y parámetros de temperatura para asegurar la inocuidad.
 
 **Traza ReAct de la respuesta:**
 ```json
@@ -64,8 +64,8 @@ HTTP 200
 ```
 
 
-## Estado de esta evidencia
-PENDIENTE: esta corrida se hizo sin que el proceso de Render se hubiera reiniciado (seguía con 38 ejecuciones en memoria), por lo que todavía no prueba la persistencia tras un reinicio. Se regenera después de reiniciar el servicio.
+## Comprobación del reinicio
+Antes de esta solicitud, `GET /registros` devolvía 0 ejecuciones: el proceso de Render se reinició y su memoria quedó vacía. El registro de la parte 1 (`0420ad6b-5c32-46f3-83c2-97e24bc69381`) ahora se lee desde Postgres (`"origen": "postgres"`, flujo OPERACIONES, estado completado). La conversación del hilo `evidencia-memoria` se retomó desde el checkpointer de Postgres (`memoria_recuperada.mensajes_previos = 6`).
 
 ## Verificación
 - ✅ HTTP 200 (esperado 200)

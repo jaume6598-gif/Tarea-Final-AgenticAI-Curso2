@@ -23,7 +23,7 @@ RESTRICCIONES = [
     "CREATE CONSTRAINT producto_nombre IF NOT EXISTS FOR (n:Producto) REQUIRE n.nombre IS UNIQUE",
     "CREATE CONSTRAINT categoria_nombre IF NOT EXISTS FOR (n:Categoria) REQUIRE n.nombre IS UNIQUE",
     "CREATE CONSTRAINT local_nombre IF NOT EXISTS FOR (n:Local) REQUIRE n.nombre IS UNIQUE",
-    "CREATE CONSTRAINT camara_nombre IF NOT EXISTS FOR (n:Camara) REQUIRE n.nombre IS UNIQUE",
+    "CREATE CONSTRAINT ubicacion_nombre IF NOT EXISTS FOR (n:Ubicacion) REQUIRE n.nombre IS UNIQUE",
 ]
 
 CARGAR_LOTE = """
@@ -32,7 +32,7 @@ MERGE (l:Lote {codigo: $lote})
   SET l.vencimiento = $vencimiento, l.stock = $stock, l.stock_minimo = $stock_minimo
 MERGE (p:Producto {nombre: $producto})
 MERGE (cat:Categoria {nombre: $categoria})
-MERGE (c:Camara {nombre: $ubicacion})
+MERGE (c:Ubicacion {nombre: $ubicacion})
 MERGE (pr)-[:SUMINISTRA]->(l)
 MERGE (l)-[:DE_PRODUCTO]->(p)
 MERGE (p)-[:EN_CATEGORIA]->(cat)
@@ -49,7 +49,7 @@ SET pr.dias_entrega = $dias_entrega, pr.pedido_minimo = $pedido_minimo
 """
 
 ACTUALIZAR_CAMARA = """
-MERGE (c:Camara {nombre: $nombre})
+MERGE (c:Ubicacion {nombre: $nombre})
 SET c.max_c = $max_c, c.alerta = $max_c > $limite
 """
 
@@ -60,6 +60,9 @@ def main() -> None:
     driver = crear_driver()
     with driver:
         driver.verify_connectivity()
+        # v1 used the label Camara for every storage place (shelves too).
+        driver.execute_query("MATCH (c:Camara) DETACH DELETE c")
+        driver.execute_query("DROP CONSTRAINT camara_nombre IF EXISTS")
         for sentencia in RESTRICCIONES:
             driver.execute_query(sentencia)
         for lote in lotes:

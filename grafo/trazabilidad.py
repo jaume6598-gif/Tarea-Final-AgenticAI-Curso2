@@ -3,7 +3,7 @@
 Modelo del grafo (cargado por scripts/cargar_grafo.py):
 
     (Proveedor)-[:SUMINISTRA]->(Lote)-[:DE_PRODUCTO]->(Producto)-[:EN_CATEGORIA]->(Categoria)
-    (Lote)-[:ALMACENADO_EN]->(Camara)
+    (Lote)-[:ALMACENADO_EN]->(Ubicacion)
     (Lote)-[:DESPACHADO_A]->(Local)
 
 La consulta es una plantilla Cypher fija y de solo lectura: el modelo
@@ -27,6 +27,7 @@ FILTROS = {
     "proveedor": "toLower(pr.nombre) CONTAINS $valor",
     "lote": "toLower(l.codigo) = $valor",
     "camara": "toLower(c.nombre) CONTAINS $valor",
+    "ubicacion": "toLower(c.nombre) CONTAINS $valor",
     "local": ("EXISTS { MATCH (l)-[:DESPACHADO_A]->(x:Local) "
               "WHERE toLower(x.nombre) CONTAINS $valor }"),
 }
@@ -34,7 +35,7 @@ FILTROS = {
 PLANTILLA = """
 MATCH (pr:Proveedor)-[:SUMINISTRA]->(l:Lote)-[:DE_PRODUCTO]->(p:Producto)
       -[:EN_CATEGORIA]->(cat:Categoria),
-      (l)-[:ALMACENADO_EN]->(c:Camara)
+      (l)-[:ALMACENADO_EN]->(c:Ubicacion)
 WHERE {filtro}
 OPTIONAL MATCH (l)-[:DESPACHADO_A]->(loc:Local)
 RETURN pr.nombre AS proveedor, l.codigo AS lote, l.vencimiento AS vencimiento,
@@ -109,16 +110,16 @@ def formatear(tipo: str, valor: str, filas: list[dict]) -> str:
             f"- Proveedor({fila['proveedor']}) -SUMINISTRA-> Lote({fila['lote']}) "
             f"-DE_PRODUCTO-> Producto({fila['producto']}) -EN_CATEGORIA-> "
             f"Categoria({fila['categoria']}); Lote({fila['lote']}) -ALMACENADO_EN-> "
-            f"Camara({fila['camara']}){alerta}; Lote({fila['lote']}) -DESPACHADO_A-> "
+            f"Ubicacion({fila['camara']}){alerta}; Lote({fila['lote']}) -DESPACHADO_A-> "
             f"Local({locales}). Stock {fila['stock']}, vence {fila['vencimiento']} "
             f"(en {dias} dias)."
         )
     proveedores = sorted({f["proveedor"] for f in filas})
     locales = sorted({loc for f in filas for loc in f["locales"]})
-    camaras = sorted({f["camara"] for f in filas})
+    ubicaciones = sorted({f["camara"] for f in filas})
     lineas.append(
         f"Hechos calculados sobre todo el recorrido: proveedores {proveedores}; "
-        f"locales alcanzados {locales}; camaras {camaras}; "
+        f"locales alcanzados {locales}; ubicaciones {ubicaciones}; "
         f"unidades en stock {sum(f['stock'] for f in filas)}."
     )
     return "\n".join(lineas)

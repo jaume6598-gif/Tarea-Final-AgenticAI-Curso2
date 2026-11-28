@@ -12,6 +12,7 @@ Ejecucion local:
 
 import json
 import secrets
+import unicodedata
 from pathlib import Path
 
 from mcp.server.fastmcp import FastMCP
@@ -34,10 +35,17 @@ mcp = FastMCP(
 )
 
 
+def _normalizar(texto: str) -> str:
+    """Lowercase without accents: 'Lácteos Sur' matches 'Lacteos Sur'."""
+    descompuesto = unicodedata.normalize("NFKD", texto.strip().lower())
+    return "".join(c for c in descompuesto if not unicodedata.combining(c))
+
+
 def _buscar(nombre: str, opciones: dict) -> str | None:
-    termino = nombre.strip().lower()
+    termino = _normalizar(nombre)
     for clave in opciones:
-        if termino and (termino in clave.lower() or clave.lower() in termino):
+        candidato = _normalizar(clave)
+        if termino and (termino in candidato or candidato in termino):
             return clave
     return None
 

@@ -117,6 +117,13 @@ def test_herramienta_mcp_detecta_temperatura_fuera_de_rango():
     assert "pedido minimo 60" in servidor_mcp.consultar_proveedor("lacteos sur")
 
 
+def test_herramienta_mcp_ignora_tildes():
+    import servidor_mcp
+
+    assert "pedido minimo 60" in servidor_mcp.consultar_proveedor("Lácteos Sur")
+    assert "Camara fria 2" in servidor_mcp.registro_temperaturas("Cámara fría 2")
+
+
 def test_cliente_mcp_filtra_por_allowlist(monkeypatch):
     from agentes.jaime import mcp_cliente
 

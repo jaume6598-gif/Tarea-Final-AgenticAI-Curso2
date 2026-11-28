@@ -33,9 +33,12 @@ lote. Ejemplo: "La cámara fría 2 tuvo un quiebre de
 frío, ¿qué proveedores y locales están afectados?".
 
 4. REPOSICION:
-Solicitudes para reponer stock o generar órdenes o
-pedidos de compra a proveedores. Ejemplo: "Genera las
-órdenes de compra para lo que está bajo el mínimo".
+Solo cuando se pide EJECUTAR una reposición: generar,
+crear o preparar órdenes o pedidos de compra. Ejemplo:
+"Genera las órdenes de compra para lo que está bajo el
+mínimo". Consultar qué está bajo el mínimo, el stock o
+los términos de un proveedor (pedido mínimo, plazo de
+entrega) es OPERACIONES, aunque mencione el mínimo.
 
 REGLAS DE CLASIFICACION:
 

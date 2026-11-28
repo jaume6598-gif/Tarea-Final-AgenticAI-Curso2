@@ -32,6 +32,11 @@ proveedores quedan afectados por una cámara o un
 lote. Ejemplo: "La cámara fría 2 tuvo un quiebre de
 frío, ¿qué proveedores y locales están afectados?".
 
+4. REPOSICION:
+Solicitudes para reponer stock o generar órdenes o
+pedidos de compra a proveedores. Ejemplo: "Genera las
+órdenes de compra para lo que está bajo el mínimo".
+
 REGLAS DE CLASIFICACION:
 
 1. Identifica el objetivo principal de la consulta.

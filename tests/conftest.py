@@ -14,6 +14,11 @@ os.environ.update({
     "MAX_PASOS_REACT": "25",
     "URL_GERARDO": "http://127.0.0.1:9",
     "TIMEOUT_A2A_S": "3",
+    # Offline tests: never reach the real external services from .env.
+    "DATABASE_URL": "",
+    "NEO4J_URI": "",
+    "N8N_A2A_URL": "",
+    "LANGSMITH_TRACING": "false",
 })
 
 import pytest  # noqa: E402

@@ -317,3 +317,73 @@ def test_flujo_trazabilidad_cita_el_recorrido(cliente, modelos_falsos, router_fi
     registro = cliente.get(f"/registros/{cuerpo['id_ejecucion']}", headers=LECTOR).json()
     recorrido = [e for e in registro["eventos"] if e["evento"] == "recorrido_grafo"][0]
     assert recorrido["lotes"] == ["L-103", "L-501"]
+
+
+# ------------------------------------------------------------ A2A con n8n (REPOSICION)
+
+def test_encargo_de_compras_usa_datos_verificados():
+    import json as _json
+    from agentes.jaime.compras import construir_encargo, items_bajo_minimo
+
+    items = items_bajo_minimo()
+    lotes = {i["lote"] for i in items}
+    assert lotes == {"L-103", "L-202", "L-302", "L-501"}
+    queso = next(i for i in items if i["lote"] == "L-103")
+    assert queso["pedido_minimo"] == 60 and queso["dias_entrega"] == 2
+    bloque = construir_encargo(items).split("```json\n")[1].split("\n```")[0]
+    assert _json.loads(bloque)["fecha_referencia"] == "2026-12-01"
+
+
+def _react_falso(textos):
+    respuestas = iter(textos)
+
+    async def falso(instruccion, simular_fallo=False, agente=None, hilo=None):
+        return next(respuestas), [{"evento": "parada", "motivo": "respuesta_final"}]
+    return falso
+
+
+def test_reposicion_delega_a_n8n_y_usa_las_ordenes(cliente, monkeypatch, router_fijo):
+    router_fijo("REPOSICION")
+    monkeypatch.setattr("agentes.jaime.grafo.ejecutar_react", _react_falso([
+        "Hay 4 lotes bajo minimo.",
+        "Se generaron OC-20261201-001 (Lacteos Sur, 60 u.) en borrador.",
+    ]))
+    monkeypatch.setattr("agentes.jaime.grafo.obtener_config", lambda: _config_con_n8n())
+    encargos = []
+
+    async def n8n_falso(url, token, texto, timeout_s, nombre="", context_id=None):
+        encargos.append((url, token, texto))
+        return "OC-20261201-001 | Lacteos Sur | 60 unidades"
+    monkeypatch.setattr("agentes.jaime.a2a_cliente.enviar_mensaje", n8n_falso)
+
+    cuerpo = cliente.post("/consultar", headers=LECTOR, json={
+        "pregunta": "Genera las órdenes de compra de lo que está bajo el mínimo"}).json()
+
+    assert cuerpo["flujo"] == "REPOSICION" and cuerpo["estado"] == "completado"
+    assert encargos[0][0] == "https://n8n.ejemplo/webhook/agente-compras"
+    assert '"lote": "L-103"' in encargos[0][2]
+    assert cuerpo["respuesta_agente_compras"].startswith("OC-20261201-001")
+    assert "OC-20261201-001" in cuerpo["respuesta"]
+    eventos = [e["evento"] for e in cliente.get(
+        f"/registros/{cuerpo['id_ejecucion']}", headers=LECTOR).json()["eventos"]]
+    assert {"delegacion_a2a", "resultado_a2a_recibido", "uso_resultado_a2a"} <= set(eventos)
+
+
+def test_reposicion_sin_n8n_no_inventa_ordenes(cliente, monkeypatch, router_fijo):
+    router_fijo("REPOSICION")
+    monkeypatch.setattr("agentes.jaime.grafo.ejecutar_react",
+                        _react_falso(["Hay 4 lotes bajo minimo."]))
+
+    cuerpo = cliente.post("/consultar", headers=LECTOR, json={
+        "pregunta": "Genera las órdenes de compra de lo que está bajo el mínimo"}).json()
+
+    assert cuerpo["estado"] == "parcial"
+    assert "Agente Compras no disponible" in cuerpo["respuesta"]
+    assert "OC-" not in cuerpo["respuesta"]
+
+
+def _config_con_n8n():
+    from dataclasses import replace
+    from config import obtener_config
+    return replace(obtener_config(), n8n_a2a_url="https://n8n.ejemplo/webhook/agente-compras",
+                   n8n_token="token-n8n-prueba")

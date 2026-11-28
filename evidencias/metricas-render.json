@@ -1,0 +1,36 @@
+{
+  "ejecuciones": 17,
+  "por_flujo": {
+    "OPERACIONES": 10,
+    "REPOSICION": 2,
+    "TRAZABILIDAD": 1,
+    "TECNOLOGIA": 3,
+    "RECHAZO": 1
+  },
+  "por_estado": {
+    "completado": 14,
+    "parcial": 2,
+    "bloqueado": 1
+  },
+  "latencia_ms": {
+    "p50": 4196,
+    "p95": 8159,
+    "max": 9681
+  },
+  "tokens": {
+    "entrada_total": 74134,
+    "salida_total": 6775,
+    "promedio_por_ejecucion_con_llm": 5057,
+    "llamadas_llm_total": 53
+  },
+  "eventos_clave": {
+    "modelo_respaldo_usado": 4,
+    "fallo_a2a": 2,
+    "accion_bloqueada": 1,
+    "solicitud_bloqueada": 1,
+    "llamada_mcp": 3,
+    "rag_fragmentos": 5,
+    "aprobacion_pendiente": 1,
+    "error_router": 0
+  }
+}

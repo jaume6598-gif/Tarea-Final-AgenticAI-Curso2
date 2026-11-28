@@ -1,0 +1,13 @@
+lote,producto,categoria,proveedor,stock,stock_minimo,vencimiento,ubicacion,despachado_a
+L-101,Leche entera 1L,Lacteos,Lacteos Sur,48,30,2026-12-04,Camara fria 1,Local Centro;Local Norte
+L-102,Yogur natural 150g,Lacteos,Lacteos Sur,120,60,2026-12-06,Camara fria 1,Local Centro;Local Oriente;Local Norte
+L-103,Queso fresco 500g,Lacteos,Lacteos Sur,15,20,2026-12-12,Camara fria 2,Local Oriente
+L-201,Pan de molde,Panaderia,Panificadora Andes,35,25,2026-12-03,Gondola 4,Local Centro
+L-202,Hallullas bolsa 1kg,Panaderia,Panificadora Andes,10,20,2026-12-02,Gondola 4,Local Norte
+L-301,Pechuga de pollo 1kg,Carnes,Avicola del Valle,22,15,2026-12-05,Camara fria 3,Local Centro;Local Oriente
+L-302,Carne molida 500g,Carnes,Frigorifico Austral,8,12,2026-12-03,Camara fria 3,Local Norte
+L-401,Arroz grado 1 1kg,Abarrotes,Distribuidora Maipo,200,80,2027-08-30,Bodega seca A,Local Centro;Local Norte;Local Oriente
+L-402,Aceite maravilla 1L,Abarrotes,Distribuidora Maipo,60,40,2027-05-15,Bodega seca A,Local Oriente
+L-501,Jugo de naranja 1L,Bebidas,Jugos del Pacifico,30,40,2026-12-20,Camara fria 2,Local Centro;Local Norte
+L-502,Agua mineral 1.5L,Bebidas,Jugos del Pacifico,150,100,2027-10-01,Bodega seca B,Local Centro
+L-601,Lechuga hidroponica,Verduras,Huerta Los Alamos,25,20,2026-12-02,Camara fria 4,Local Oriente;Local Centro

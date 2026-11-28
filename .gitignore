@@ -3,4 +3,4 @@
 __pycache__/
 *.pyc
 main_base.py
-servidor_a2a copy.py
+servidor_a2a copy.py.pytest_cache/

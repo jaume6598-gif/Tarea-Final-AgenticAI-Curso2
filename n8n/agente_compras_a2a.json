@@ -1,0 +1,146 @@
+{
+  "name": "Agente Compras A2A",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "agente-compras",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "A2A SendMessage",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "5b1f3c2e-agente-compras-post",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "",
+          "name": "A2A Jaime"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const peticion = $input.first().json;\nconst rpc = peticion.body || {};\nconst partes = ((rpc.params || {}).message || {}).parts || [];\nconst texto = partes.map(p => p.text || '').join('\\n');\n\nfunction errorRpc(mensaje) {\n  return [{ json: { jsonrpc: '2.0', id: rpc.id ?? null,\n                    error: { code: -32602, message: mensaje } } }];\n}\n\nlet encargo;\ntry {\n  const bloque = texto.match(/```json\\s*([\\s\\S]*?)```/);\n  encargo = JSON.parse(bloque ? bloque[1] : texto);\n} catch (e) {\n  return errorRpc('El encargo no trae un JSON de reposicion valido');\n}\nconst items = Array.isArray(encargo.items) ? encargo.items : [];\nif (items.length === 0) {\n  return errorRpc('El encargo no trae items para reponer');\n}\n\nconst fechaBase = new Date((encargo.fecha_referencia || '2026-12-01') + 'T12:00:00Z');\nconst porProveedor = {};\nfor (const item of items) {\n  const objetivo = item.stock_minimo * 2;\n  const faltante = Math.max(0, objetivo - item.stock);\n  const cantidad = Math.max(faltante, item.pedido_minimo || 0);\n  if (cantidad <= 0) continue;\n  (porProveedor[item.proveedor] = porProveedor[item.proveedor] || []).push({\n    lote: item.lote, producto: item.producto, stock: item.stock,\n    stock_minimo: item.stock_minimo, cantidad,\n    dias_entrega: item.dias_entrega || 0,\n  });\n}\n\nconst fecha = (encargo.fecha_referencia || '2026-12-01').replace(/-/g, '');\nconst ordenes = Object.entries(porProveedor).map(([proveedor, lineas], i) => {\n  const dias = Math.max(...lineas.map(l => l.dias_entrega));\n  const entrega = new Date(fechaBase.getTime() + dias * 86400000)\n    .toISOString().slice(0, 10);\n  return {\n    orden: `OC-${fecha}-${String(i + 1).padStart(3, '0')}`,\n    proveedor, entrega_estimada: entrega,\n    unidades: lineas.reduce((s, l) => s + l.cantidad, 0), lineas,\n  };\n});\n\nconst resumen = ordenes.map(o =>\n  `${o.orden} | ${o.proveedor} | ${o.unidades} unidades | entrega estimada ${o.entrega_estimada} | ` +\n  o.lineas.map(l => `${l.producto} (${l.lote}): ${l.cantidad} u.`).join('; ')\n).join('\\n');\n\nconst respuesta = 'Agente Compras (n8n) genero ' + ordenes.length +\n  ' ordenes de compra en estado BORRADOR (no enviadas al proveedor).\\n' +\n  'Regla: cantidad = max(2 x stock minimo - stock, pedido minimo del proveedor).\\n' +\n  resumen + '\\n```json\\n' + JSON.stringify({ ordenes }) + '\\n```';\n\nreturn [{ json: {\n  jsonrpc: '2.0', id: rpc.id ?? null,\n  result: { message: {\n    messageId: $execution.id + '-respuesta', role: 'ROLE_AGENT',\n    parts: [{ text: respuesta }],\n  } },\n} }];"
+      },
+      "name": "Calcular ordenes",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "name": "Responder A2A",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "GET",
+        "path": "agente-compras/.well-known/agent-card.json",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Agent Card",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        240
+      ],
+      "webhookId": "5b1f3c2e-agente-compras-card"
+    },
+    {
+      "parameters": {
+        "jsCode": "const peticion = $input.first().json;\nconst host = (peticion.headers || {})['x-forwarded-host'] || (peticion.headers || {}).host;\nconst url = `https://${host}/webhook/agente-compras`;\nreturn [{ json: {\n  name: 'Agente Compras (n8n)',\n  description: 'Genera ordenes de compra en borrador a partir de los items bajo stock minimo. No envia pedidos ni modifica inventario.',\n  version: '1.0.0',\n  capabilities: { streaming: false },\n  defaultInputModes: ['text/plain'],\n  defaultOutputModes: ['text/plain'],\n  supportedInterfaces: [{ protocolBinding: 'JSONRPC', url, protocolVersion: '1.0' }],\n  skills: [{ id: 'ordenes-compra', name: 'Ordenes de compra',\n             description: 'Calcula cantidades y agrupa por proveedor.',\n             tags: ['compras', 'reposicion'],\n             examples: ['Reponer los lotes bajo stock minimo'] }],\n} }];"
+      },
+      "name": "Armar tarjeta",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        260,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json) }}",
+        "options": {}
+      },
+      "name": "Responder tarjeta",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        520,
+        240
+      ]
+    }
+  ],
+  "connections": {
+    "A2A SendMessage": {
+      "main": [
+        [
+          {
+            "node": "Calcular ordenes",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calcular ordenes": {
+      "main": [
+        [
+          {
+            "node": "Responder A2A",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Agent Card": {
+      "main": [
+        [
+          {
+            "node": "Armar tarjeta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Armar tarjeta": {
+      "main": [
+        [
+          {
+            "node": "Responder tarjeta",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "active": false
+}

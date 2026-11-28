@@ -1,24 +1,17 @@
-
-import os
-from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain.agents import create_agent
 
-from agentes.gerardo.prompts import SYSTEM_VIAJES
 from agentes.gerardo.herramientas import HERRAMIENTAS
+from agentes.gerardo.prompts import SYSTEM_VIAJES
+from agentes.modelos import RespaldoDeModelo, crear_modelos
 
-load_dotenv()
 
 def crear_agente_gerardo():
-    modelo = ChatGoogleGenerativeAI(
-        model=os.environ["MODELO"]
-    )
+    principal, respaldo = crear_modelos()
 
-    agente = create_agent(
-        model=modelo,
+    return create_agent(
+        model=principal,
         tools=HERRAMIENTAS,
         system_prompt=SYSTEM_VIAJES,
+        middleware=[RespaldoDeModelo(respaldo)],
         name="agente_gerardo",
     )
-
-    return agente

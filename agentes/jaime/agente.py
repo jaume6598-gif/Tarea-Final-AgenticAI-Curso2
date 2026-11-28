@@ -1,24 +1,65 @@
+"""Agente Jaime (worker ReAct).
 
-import os
-from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
+Ciclo ReAct: el modelo decide llamar una herramienta, recibe el
+resultado y decide si continua o responde.
+
+Condiciones de parada explicitas:
+1. respuesta_final: el modelo responde sin pedir herramientas.
+2. limite_herramientas: se alcanzan MAX_LLAMADAS_HERRAMIENTA llamadas
+   (ToolCallLimitMiddleware con exit_behavior="end").
+3. limite_pasos: se alcanzan MAX_PASOS_REACT pasos del grafo
+   (recursion_limit -> GraphRecursionError).
+"""
+
 from langchain.agents import create_agent
+from langchain.agents.middleware import ToolCallLimitMiddleware
 
-from agentes.jaime.prompts import SYSTEM_VIAJES
 from agentes.jaime.herramientas import HERRAMIENTAS
+from agentes.jaime.prompts import SYSTEM_JAIME
+from agentes.modelos import RespaldoDeModelo, crear_modelos
+from config import obtener_config
 
-load_dotenv()
 
-def crear_agente_jaime():
-    modelo = ChatGoogleGenerativeAI(
-        model=os.environ["MODELO"]
-    )
+def crear_agente_jaime(simular_fallo: bool = False, herramientas=None,
+                       checkpointer=None):
+    config = obtener_config()
+    principal, respaldo = crear_modelos(simular_fallo=simular_fallo)
 
-    agente = create_agent(
-        model=modelo,
-        tools=HERRAMIENTAS,
-        system_prompt=SYSTEM_VIAJES,
+    return create_agent(
+        model=principal,
+        tools=herramientas or HERRAMIENTAS,
+        system_prompt=SYSTEM_JAIME,
+        middleware=[
+            RespaldoDeModelo(respaldo),
+            ToolCallLimitMiddleware(
+                run_limit=config.max_llamadas_herramienta,
+                exit_behavior="end",
+            ),
+        ],
+        checkpointer=checkpointer,
         name="agente_jaime",
     )
 
-    return agente
+
+_agentes: dict = {}
+
+
+def obtener_agente_jaime(simular_fallo: bool = False, herramientas_extra=(),
+                         checkpointer=None):
+    """El agente se compila una sola vez por modo, herramientas y memoria.
+
+    Con checkpointer, cada `thread_id` (hilo) conserva su conversacion.
+    """
+
+    clave = (simular_fallo, tuple(sorted(h.name for h in herramientas_extra)),
+             id(checkpointer) if checkpointer is not None else None)
+    if clave not in _agentes:
+        _agentes[clave] = crear_agente_jaime(
+            simular_fallo=simular_fallo,
+            herramientas=[*HERRAMIENTAS, *herramientas_extra],
+            checkpointer=checkpointer,
+        )
+    return _agentes[clave]
+
+
+obtener_agente_jaime.cache_clear = _agentes.clear

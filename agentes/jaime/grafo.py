@@ -2,13 +2,15 @@ r"""Grafo del agente Jaime: el mismo agente es router y worker.
 
     __start__ -> guardia_entrada -> router -> operaciones  -> __end__
                         |               \-> tecnologia   -> __end__
+                        |               \-> trazabilidad -> __end__
                         |                \-> rechazo     -> __end__
                         \---------------------> rechazo
 
 - guardia_entrada: filtro determinista (sin LLM).
 - router: Jaime clasifica con salida estructurada (Decision).
-- operaciones / tecnologia: Jaime ejecuta el trabajo (ReAct).
+- operaciones / tecnologia / trazabilidad: Jaime ejecuta el trabajo (ReAct).
 - tecnologia delega a Gerardo por A2A y usa su respuesta.
+- trazabilidad recorre el grafo de Neo4j (GraphRAG) y cita el recorrido.
 """
 
 import operator
@@ -96,6 +98,26 @@ async def nodo_operaciones(estado: EstadoJaime) -> dict:
     )
     return {
         "ruta": ["operaciones"],
+        "respuesta": respuesta,
+        "traza": traza,
+        "estado": _estado_por_parada(traza),
+    }
+
+
+async def nodo_trazabilidad(estado: EstadoJaime) -> dict:
+    _fijar_flujo("TRAZABILIDAD")
+    respuesta, traza = await ejecutar_react(
+        "Resuelve la solicitud de trazabilidad recorriendo el grafo con "
+        "recorrer_trazabilidad (puedes complementar con registro_temperaturas). "
+        "Sustenta cada conclusion citando el recorrido de relaciones "
+        "(por ejemplo Proveedor -SUMINISTRA-> Lote -DESPACHADO_A-> Local). "
+        "No inventes lotes ni locales que no aparezcan en el recorrido.\n\n"
+        f"<solicitud>{estado['pregunta']}</solicitud>",
+        simular_fallo=estado.get("simular") == "modelo",
+        hilo=estado.get("hilo"),
+    )
+    return {
+        "ruta": ["trazabilidad"],
         "respuesta": respuesta,
         "traza": traza,
         "estado": _estado_por_parada(traza),
@@ -220,6 +242,7 @@ def despues_de_router(estado: EstadoJaime) -> str:
     return {
         "OPERACIONES": "operaciones",
         "TECNOLOGIA": "tecnologia",
+        "TRAZABILIDAD": "trazabilidad",
     }.get(estado.get("flujo", ""), "rechazo")
 
 
@@ -229,14 +252,16 @@ def construir_grafo():
     grafo.add_node("router", nodo_router)
     grafo.add_node("operaciones", nodo_operaciones)
     grafo.add_node("tecnologia", nodo_tecnologia)
+    grafo.add_node("trazabilidad", nodo_trazabilidad)
     grafo.add_node("rechazo", nodo_rechazo)
 
     grafo.add_edge(START, "guardia_entrada")
     grafo.add_conditional_edges("guardia_entrada", despues_de_guardia,
                                 ["router", "rechazo"])
     grafo.add_conditional_edges("router", despues_de_router,
-                                ["operaciones", "tecnologia", "rechazo"])
-    for nodo in ("operaciones", "tecnologia", "rechazo"):
+                                ["operaciones", "tecnologia", "trazabilidad",
+                                 "rechazo"])
+    for nodo in ("operaciones", "tecnologia", "trazabilidad", "rechazo"):
         grafo.add_edge(nodo, END)
     return grafo.compile(name="grafo_jaime")
 

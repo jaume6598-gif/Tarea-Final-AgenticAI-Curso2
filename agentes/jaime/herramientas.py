@@ -141,6 +141,20 @@ def buscar_procedimientos(consulta: str) -> str:
 
 
 @tool
+def recorrer_trazabilidad(tipo: str, valor: str) -> str:
+    """GraphRAG: recorre el grafo de trazabilidad en Neo4j
+    (Proveedor -> Lote -> Producto/Categoria, Lote -> Camara, Lote -> Local)
+    desde un punto de partida y devuelve las rutas y hechos calculados.
+    tipo: 'proveedor', 'lote', 'camara' o 'local'. valor: nombre o codigo,
+    por ejemplo ('camara', 'Camara fria 2') o ('lote', 'L-102').
+    """
+
+    from grafo.trazabilidad import recorrer
+
+    return recorrer(tipo, valor)
+
+
+@tool
 def registrar_merma(lote: str, cantidad: int, motivo: str) -> str:
     """Propone registrar una merma (vencimiento, daño, cadena de frio o
     diferencia de inventario). NO descuenta stock: crea una solicitud
@@ -181,6 +195,7 @@ HERRAMIENTAS = [
     consultar_stock,
     consultar_vencimientos,
     buscar_procedimientos,
+    recorrer_trazabilidad,
     registrar_merma,
     eliminar_lote,
 ]

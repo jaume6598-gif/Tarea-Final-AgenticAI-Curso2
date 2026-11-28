@@ -240,3 +240,80 @@ def test_hilo_invalido_se_rechaza(cliente):
     respuesta = cliente.post("/consultar", headers=LECTOR, json={
         "pregunta": "¿Qué vence esta semana?", "hilo": "../etc/passwd"})
     assert respuesta.status_code == 422
+
+
+# ------------------------------------------------------------ GraphRAG
+
+FILAS_CAMARA_2 = [
+    {"proveedor": "Lacteos Sur", "lote": "L-103", "vencimiento": "2026-12-12",
+     "stock": 15, "producto": "Queso fresco 500g", "categoria": "Lacteos",
+     "camara": "Camara fria 2", "alerta_camara": True, "max_c": 7.1,
+     "locales": ["Local Oriente"]},
+    {"proveedor": "Jugos del Pacifico", "lote": "L-501", "vencimiento": "2026-12-20",
+     "stock": 30, "producto": "Jugo de naranja 1L", "categoria": "Bebidas",
+     "camara": "Camara fria 2", "alerta_camara": True, "max_c": 7.1,
+     "locales": ["Local Centro", "Local Norte"]},
+]
+
+
+def test_grafo_devuelve_recorrido_y_hechos():
+    from grafo.trazabilidad import recorrer
+
+    consultas = []
+
+    def ejecutor(cypher, parametros):
+        consultas.append((cypher, parametros))
+        return FILAS_CAMARA_2
+
+    texto = recorrer("camara", "Cámara fría 2", ejecutor)
+
+    assert parametros_normalizados(consultas) == {"valor": "camara fria 2"}
+    assert "Proveedor(Lacteos Sur) -SUMINISTRA-> Lote(L-103)" in texto
+    assert "-DESPACHADO_A-> Local(Local Centro, Local Norte)" in texto
+    assert "CAMARA CON ALERTA DE TEMPERATURA" in texto
+    assert "locales alcanzados ['Local Centro', 'Local Norte', 'Local Oriente']" in texto
+    assert "MERGE" not in consultas[0][0] and "toLower(c.nombre)" in consultas[0][0]
+
+
+def parametros_normalizados(consultas):
+    return consultas[0][1]
+
+
+def test_grafo_tipo_invalido_no_consulta():
+    from grafo.trazabilidad import recorrer
+
+    def ejecutor(*_):
+        raise AssertionError("no debe consultar")
+
+    assert recorrer("cliente", "x", ejecutor).startswith("Parametro invalido")
+
+
+def test_grafo_caido_no_inventa():
+    from grafo.trazabilidad import recorrer
+
+    def ejecutor(*_):
+        raise ConnectionError("Aura pausada")
+
+    assert recorrer("lote", "L-102", ejecutor).startswith("GRAFO_NO_DISPONIBLE")
+
+
+def test_flujo_trazabilidad_cita_el_recorrido(cliente, modelos_falsos, router_fijo, monkeypatch):
+    router_fijo("TRAZABILIDAD")
+    monkeypatch.setattr("grafo.trazabilidad.ejecutar_lectura", lambda c, p: FILAS_CAMARA_2)
+    modelos_falsos(modelo_con(
+        llamada("recorrer_trazabilidad", tipo="camara", valor="Camara fria 2"),
+        AIMessage(content="Afecta a Local Oriente, Local Centro y Local Norte "
+                          "(Lote L-103 -DESPACHADO_A-> Local Oriente)."),
+    ))
+
+    cuerpo = cliente.post("/consultar", headers=LECTOR, json={
+        "pregunta": "La cámara fría 2 tuvo un quiebre de frío, ¿qué locales afecta?"}).json()
+
+    assert cuerpo["flujo"] == "TRAZABILIDAD"
+    assert cuerpo["ruta"] == ["guardia_entrada", "router", "trazabilidad"]
+    resultado = [p for p in cuerpo["traza"] if p["evento"] == "resultado_herramienta"][0]
+    assert resultado["herramienta"] == "recorrer_trazabilidad"
+    assert "SUMINISTRA" in resultado["resultado"]
+    registro = cliente.get(f"/registros/{cuerpo['id_ejecucion']}", headers=LECTOR).json()
+    recorrido = [e for e in registro["eventos"] if e["evento"] == "recorrido_grafo"][0]
+    assert recorrido["lotes"] == ["L-103", "L-501"]

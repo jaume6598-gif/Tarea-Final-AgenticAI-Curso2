@@ -12,11 +12,11 @@ from pydantic import BaseModel, Field
 from agentes.jaime.prompt_router import SYSTEM_ROUTER
 from agentes.modelos import invocar_con_respaldo
 
-FLUJOS_VALIDOS = ("OPERACIONES", "TECNOLOGIA", "RECHAZO")
+FLUJOS_VALIDOS = ("OPERACIONES", "TECNOLOGIA", "TRAZABILIDAD", "RECHAZO")
 
 
 class Decision(BaseModel):
-    flujo: Literal["OPERACIONES", "TECNOLOGIA", "RECHAZO"] = Field(
+    flujo: Literal["OPERACIONES", "TECNOLOGIA", "TRAZABILIDAD", "RECHAZO"] = Field(
         description="Flujo que debe ejecutar Jaime."
     )
     motivo: str = Field(description="Una frase: por qué ese flujo.")

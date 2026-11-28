@@ -1,7 +1,10 @@
 """API publica: autenticacion, bitacora e invocacion del grafo de Jaime."""
 
+import asyncio
 import logging
 import secrets
+import sys
+from contextlib import asynccontextmanager
 from typing import Annotated
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query
@@ -13,6 +16,7 @@ from agentes.errores import ErrorFlujo
 from agentes.jaime.grafo import SIMULACIONES, grafo_jaime
 from config import obtener_config, validar_config_api
 from datos.inventario import inventario
+from memoria import persistencia as memoria
 from registro.bitacora import bitacora, evento
 from registro.metricas import ContadorTokens, resumen
 from seguridad.aprobaciones import ErrorAprobacion, aprobaciones
@@ -24,7 +28,20 @@ logger = logging.getLogger("sistema_agentes")
 config = obtener_config()
 validar_config_api(config)
 
+if sys.platform == "win32":
+    # psycopg async requires a selector event loop on Windows (local runs).
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
+
+@asynccontextmanager
+async def ciclo_de_vida(_app: FastAPI):
+    await memoria.iniciar()
+    yield
+    await memoria.cerrar()
+
+
 app = FastAPI(
+    lifespan=ciclo_de_vida,
     title="Tarea Final - Agentes Jaime y Gerardo",
     version="3.0.0",
     description=(
@@ -53,6 +70,10 @@ def verificar_acceso(token: str | None = Depends(cabecera_token)) -> str:
 
 class Consulta(BaseModel):
     pregunta: str = Field(min_length=5, max_length=2000)
+    hilo: str | None = Field(
+        default=None, pattern=r"^[A-Za-z0-9_-]{1,64}$",
+        description="Conversation id: reuse it to continue the same thread.",
+    )
 
 
 def _simulacion(valor: str | None) -> str:
@@ -81,6 +102,8 @@ def comprobar_salud():
         "modelo": config.modelo,
         "modelo_respaldo": config.modelo_respaldo,
         "simulacion_fallos": config.permitir_simulacion_fallos,
+        "memoria": memoria.tipo(),
+        "memoria_motivo": memoria.motivo(),
     }
 
 
@@ -106,16 +129,18 @@ async def consultar_agentes(
 
     fijar_alcance(alcance)
     ejecucion = bitacora.iniciar(pregunta)
-    evento("solicitud", alcance=alcance, simulacion=simular or None)
+    evento("solicitud", alcance=alcance, simulacion=simular or None,
+           hilo=consulta.hilo)
 
     try:
         resultado = await grafo_jaime.ainvoke(
-            {"pregunta": pregunta, "simular": simular},
+            {"pregunta": pregunta, "simular": simular, "hilo": consulta.hilo},
             config={"callbacks": [ContadorTokens()]},
         )
     except ErrorFlujo as error:
         bitacora.finalizar(ejecucion, "error", motivo=error.motivo,
                            codigo=error.codigo)
+        await memoria.guardar_ejecucion(ejecucion)
         return JSONResponse(status_code=error.codigo, content={
             "id_ejecucion": ejecucion.id_ejecucion,
             "estado": "error",
@@ -126,6 +151,7 @@ async def consultar_agentes(
         logger.exception("Fallo no controlado en el grafo")
         bitacora.finalizar(ejecucion, "error", motivo=type(error).__name__,
                            codigo=500)
+        await memoria.guardar_ejecucion(ejecucion)
         return JSONResponse(status_code=500, content={
             "id_ejecucion": ejecucion.id_ejecucion,
             "estado": "error",
@@ -135,10 +161,12 @@ async def consultar_agentes(
     ejecucion.flujo = resultado.get("flujo")
     estado = resultado.get("estado", "completado")
     bitacora.finalizar(ejecucion, estado)
+    await memoria.guardar_ejecucion(ejecucion)
 
     cuerpo = {
         "id_ejecucion": ejecucion.id_ejecucion,
         "estado": estado,
+        "hilo": consulta.hilo,
         "duracion_ms": ejecucion.duracion_ms,
         "uso": ejecucion.uso,
         "flujo": resultado.get("flujo"),
@@ -177,11 +205,16 @@ def obtener_metricas(_alcance: str = Depends(verificar_acceso)):
 
 
 @app.get("/registros/{id_ejecucion}")
-def obtener_registro(id_ejecucion: str, _alcance: str = Depends(verificar_acceso)):
+async def obtener_registro(id_ejecucion: str,
+                           _alcance: str = Depends(verificar_acceso)):
     ejecucion = bitacora.obtener(id_ejecucion)
-    if ejecucion is None:
+    if ejecucion is not None:
+        return ejecucion.como_dict()
+    # After a restart the in-memory log is empty: read the durable copy.
+    guardada = await memoria.leer_ejecucion(id_ejecucion)
+    if guardada is None:
         raise HTTPException(status_code=404, detail="Ejecucion no encontrada")
-    return ejecucion.como_dict()
+    return {**guardada, "origen": "postgres"}
 
 
 class Decision(BaseModel):

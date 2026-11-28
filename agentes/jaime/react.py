@@ -8,6 +8,7 @@ from agentes.errores import ErrorFlujo
 from agentes.jaime.agente import obtener_agente_jaime
 from agentes.jaime.mcp_cliente import nombres_mcp, obtener_herramientas_mcp
 from config import obtener_config
+from memoria import persistencia as memoria
 from registro.bitacora import evento
 
 logger = logging.getLogger("sistema_agentes")
@@ -73,18 +74,32 @@ def analizar_resultado(mensajes) -> tuple[str, list[dict], str]:
 
 
 async def ejecutar_react(instruccion: str, simular_fallo: bool = False,
-                         agente=None) -> tuple[str, list[dict]]:
-    """Ejecuta Jaime con tope de pasos y de herramientas."""
+                         agente=None, hilo: str | None = None) -> tuple[str, list[dict]]:
+    """Ejecuta Jaime con tope de pasos y de herramientas.
+
+    Con `hilo`, el agente usa el checkpointer: retoma la conversacion
+    guardada de ese hilo (memoria persistente si hay Postgres).
+    """
 
     config = obtener_config()
+    guardado = memoria.checkpointer() if hilo else None
     if agente is None:
         herramientas_mcp = await obtener_herramientas_mcp()
-        agente = obtener_agente_jaime(simular_fallo, herramientas_mcp)
+        agente = obtener_agente_jaime(simular_fallo, herramientas_mcp, guardado)
+
+    config_ejecucion: dict = {"recursion_limit": config.max_pasos_react}
+    previos = 0
+    if guardado is not None:
+        config_ejecucion["configurable"] = {"thread_id": hilo}
+        estado_previo = await agente.aget_state(config_ejecucion)
+        previos = len((estado_previo.values or {}).get("messages", []))
+        evento("memoria_recuperada", hilo=hilo, mensajes_previos=previos,
+               almacenamiento=memoria.tipo())
 
     try:
         resultado = await agente.ainvoke(
             {"messages": [{"role": "user", "content": instruccion}]},
-            config={"recursion_limit": config.max_pasos_react},
+            config=config_ejecucion,
         )
     except GraphRecursionError:
         evento("parada", motivo="limite_pasos",
@@ -105,7 +120,8 @@ async def ejecutar_react(instruccion: str, simular_fallo: bool = False,
             motivo="modelo_no_disponible",
         )
 
-    texto, traza, motivo = analizar_resultado(resultado["messages"])
+    # Only this run's messages: earlier turns of the thread are context.
+    texto, traza, motivo = analizar_resultado(resultado["messages"][previos:])
     remotas = nombres_mcp()
     for paso in traza:
         if paso.get("herramienta") in remotas:

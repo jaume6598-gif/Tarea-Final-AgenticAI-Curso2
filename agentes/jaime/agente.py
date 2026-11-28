@@ -20,7 +20,8 @@ from agentes.modelos import RespaldoDeModelo, crear_modelos
 from config import obtener_config
 
 
-def crear_agente_jaime(simular_fallo: bool = False, herramientas=None):
+def crear_agente_jaime(simular_fallo: bool = False, herramientas=None,
+                       checkpointer=None):
     config = obtener_config()
     principal, respaldo = crear_modelos(simular_fallo=simular_fallo)
 
@@ -35,6 +36,7 @@ def crear_agente_jaime(simular_fallo: bool = False, herramientas=None):
                 exit_behavior="end",
             ),
         ],
+        checkpointer=checkpointer,
         name="agente_jaime",
     )
 
@@ -42,14 +44,20 @@ def crear_agente_jaime(simular_fallo: bool = False, herramientas=None):
 _agentes: dict = {}
 
 
-def obtener_agente_jaime(simular_fallo: bool = False, herramientas_extra=()):
-    """El agente se compila una sola vez por modo y conjunto de herramientas."""
+def obtener_agente_jaime(simular_fallo: bool = False, herramientas_extra=(),
+                         checkpointer=None):
+    """El agente se compila una sola vez por modo, herramientas y memoria.
 
-    clave = (simular_fallo, tuple(sorted(h.name for h in herramientas_extra)))
+    Con checkpointer, cada `thread_id` (hilo) conserva su conversacion.
+    """
+
+    clave = (simular_fallo, tuple(sorted(h.name for h in herramientas_extra)),
+             id(checkpointer) if checkpointer is not None else None)
     if clave not in _agentes:
         _agentes[clave] = crear_agente_jaime(
             simular_fallo=simular_fallo,
             herramientas=[*HERRAMIENTAS, *herramientas_extra],
+            checkpointer=checkpointer,
         )
     return _agentes[clave]
 

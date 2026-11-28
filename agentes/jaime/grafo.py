@@ -31,6 +31,7 @@ SIMULACIONES = {"modelo", "a2a", "timeout"}
 class EstadoJaime(TypedDict, total=False):
     pregunta: str
     simular: str
+    hilo: str | None
     ruta: Annotated[list[str], operator.add]
     traza: Annotated[list[dict], operator.add]
     flujo: str
@@ -91,6 +92,7 @@ async def nodo_operaciones(estado: EstadoJaime) -> dict:
         "Usa tus herramientas cuando necesites datos o apuntes.\n\n"
         f"<solicitud>{estado['pregunta']}</solicitud>",
         simular_fallo=estado.get("simular") == "modelo",
+        hilo=estado.get("hilo"),
     )
     return {
         "ruta": ["operaciones"],

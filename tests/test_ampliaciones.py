@@ -204,3 +204,39 @@ def test_variable_vacia_en_env_usa_el_valor_por_defecto(monkeypatch):
         assert valores.url_gerardo == "http://127.0.0.1:8001"
     finally:
         config.obtener_config.cache_clear()
+
+
+# ------------------------------------------------------------ memoria persistente
+
+def test_hilo_retoma_la_conversacion_guardada(modelos_falsos, router_fijo):
+    from main import app
+
+    router_fijo("OPERACIONES")
+    modelos_falsos(modelo_con(
+        llamada("consultar_stock", producto="yogur"),
+        AIMessage(content="Anotado: revisaremos el lote L-102 de yogur."),
+        AIMessage(content="Hablábamos del lote L-102 (yogur natural)."),
+    ))
+
+    with TestClient(app) as cliente:  # runs the lifespan: RAM checkpointer
+        assert cliente.get("/salud").json()["memoria"] == "ram"
+        primera = cliente.post("/consultar", headers=LECTOR, json={
+            "pregunta": "Revisa el stock del yogur, lote L-102", "hilo": "prueba-1"}).json()
+        segunda = cliente.post("/consultar", headers=LECTOR, json={
+            "pregunta": "¿Y cuál era el lote que te mencioné?", "hilo": "prueba-1"}).json()
+        registro = cliente.get(f"/registros/{segunda['id_ejecucion']}",
+                               headers=LECTOR).json()
+
+    recuperada = [e for e in registro["eventos"] if e["evento"] == "memoria_recuperada"][0]
+    assert recuperada["mensajes_previos"] == 4  # user, tool call, tool result, answer
+    assert segunda["hilo"] == "prueba-1"
+    assert "L-102" in segunda["respuesta"]
+    # The second answer's trace only shows this run, not the earlier tool call.
+    assert [p["evento"] for p in segunda["traza"]] == ["parada"]
+    assert [p["evento"] for p in primera["traza"]][0] == "decision_herramienta"
+
+
+def test_hilo_invalido_se_rechaza(cliente):
+    respuesta = cliente.post("/consultar", headers=LECTOR, json={
+        "pregunta": "¿Qué vence esta semana?", "hilo": "../etc/passwd"})
+    assert respuesta.status_code == 422

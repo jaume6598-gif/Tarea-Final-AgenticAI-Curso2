@@ -28,7 +28,9 @@ def evaluar_caso(cliente: httpx.Client, caso: dict, token: str) -> dict:
                              json={"pregunta": caso["pregunta"]})
     segundos = round(time.perf_counter() - inicio, 1)
     cuerpo = respuesta.json()
-    texto = json.dumps(cuerpo, ensure_ascii=False)
+    # Only the user-facing answer counts; ids, timings and token counts
+    # elsewhere in the body must not satisfy "debe_contener".
+    texto = cuerpo.get("respuesta") or ""
     eventos = []
     if cuerpo.get("id_ejecucion"):
         registro = cliente.get(f"/registros/{cuerpo['id_ejecucion']}",

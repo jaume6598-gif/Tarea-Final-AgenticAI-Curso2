@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
+  "version": "1.1.0",
   "descripcion": "Casos versionados del router y de los controles de Jaime. Cada caso indica el codigo HTTP, el flujo esperado y textos que deben o no aparecer en la respuesta.",
   "umbral_aciertos": 0.85,
   "casos": [
@@ -7,10 +7,10 @@
     {"id": "R02", "pregunta": "¿Cuánto stock de yogur tenemos?", "codigo": 200, "flujo": "OPERACIONES", "debe_contener": ["120"]},
     {"id": "R03", "pregunta": "¿Qué productos están bajo su stock mínimo?", "codigo": 200, "flujo": "OPERACIONES", "debe_contener": ["L-103"]},
     {"id": "R04", "pregunta": "Explica la diferencia entre FIFO y FEFO.", "codigo": 200, "flujo": "OPERACIONES"},
-    {"id": "R05", "pregunta": "Según los procedimientos internos, ¿quién debe aprobar una merma?", "codigo": 200, "flujo": "OPERACIONES", "debe_contener": ["politica_mermas.md"]},
-    {"id": "R06", "pregunta": "¿Qué dice el plan HACCP si una cámara supera 5 °C por más de 2 horas?", "codigo": 200, "flujo": "OPERACIONES", "debe_contener": ["plan_haccp_refrigerados.md"]},
-    {"id": "R07", "pregunta": "¿Cuál es el pedido mínimo y el plazo de entrega de Lácteos Sur?", "codigo": 200, "flujo": "OPERACIONES", "debe_contener": ["60"]},
-    {"id": "R08", "pregunta": "¿La cámara fría 2 tuvo lecturas de temperatura fuera de rango?", "codigo": 200, "flujo": "OPERACIONES", "debe_contener": ["7"]},
+    {"id": "R05", "pregunta": "Según los procedimientos internos, ¿quién debe aprobar una merma?", "codigo": 200, "flujo": "OPERACIONES", "debe_contener": ["politica_mermas.md"], "evento": "rag_fragmentos"},
+    {"id": "R06", "pregunta": "¿Qué dice el plan HACCP si una cámara supera 5 °C por más de 2 horas?", "codigo": 200, "flujo": "OPERACIONES", "debe_contener": ["plan_haccp_refrigerados.md"], "evento": "rag_fragmentos"},
+    {"id": "R07", "pregunta": "¿Cuál es el pedido mínimo y el plazo de entrega de Lácteos Sur?", "codigo": 200, "flujo": "OPERACIONES", "debe_contener": ["60"], "evento": "llamada_mcp"},
+    {"id": "R08", "pregunta": "¿La cámara fría 2 tuvo lecturas de temperatura fuera de rango?", "codigo": 200, "flujo": "OPERACIONES", "debe_contener": ["7"], "evento": "llamada_mcp"},
     {"id": "T01", "pregunta": "Necesito diseñar una aplicación sencilla para gestionar inventario FEFO. Propone una arquitectura.", "codigo": 200, "flujo": "TECNOLOGIA"},
     {"id": "T02", "pregunta": "¿Qué base de datos y qué arquitectura recomiendas para un sistema de trazabilidad por lote?", "codigo": 200, "flujo": "TECNOLOGIA"},
     {"id": "T03", "pregunta": "Diseña una integración entre el punto de venta y el control de vencimientos.", "codigo": 200, "flujo": "TECNOLOGIA"},

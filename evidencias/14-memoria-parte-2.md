@@ -64,8 +64,8 @@ HTTP 200
 ```
 
 
-## Comprobación del reinicio
-El registro de la parte 1 (`0420ad6b-5c32-46f3-83c2-97e24bc69381`) ya no está en la memoria del proceso: `GET /registros/0420ad6b-5c32-46f3-83c2-97e24bc69381` lo devuelve con `"origen": "None"` (flujo OPERACIONES, estado completado). La conversación del hilo `evidencia-memoria` se retomó desde el checkpointer de Postgres (`memoria_recuperada.mensajes_previos = 4`).
+## Estado de esta evidencia
+PENDIENTE: esta corrida se hizo sin que el proceso de Render se hubiera reiniciado (seguía con 38 ejecuciones en memoria), por lo que todavía no prueba la persistencia tras un reinicio. Se regenera después de reiniciar el servicio.
 
 ## Verificación
 - ✅ HTTP 200 (esperado 200)
